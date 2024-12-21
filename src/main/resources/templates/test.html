@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<h1>AI Generated Response</h1>
+
+<!-- Display the input text -->
+<p><strong>Your Input:</strong> <span th:text="${param.inputText}"></span></p>
+
+<!-- Display the generated response -->
+<p><strong>Response:</strong> <span th:text="${response}"></span></p>
+<form action="/generate" method="get">
+    <label for="inputText">Enter Text:</label>
+    <input type="text" id="inputText" name="inputText" placeholder="Enter your text here" required>
+    <button type="submit">Generate</button>
+</form>
+</body>
+</html>
