@@ -1,21 +1,345 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Assistant</title>
+    <style>
+        /* General Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 500px;
+            max-width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+            justify-content: flex-end;
+            overflow-y: auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #ffffff;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Chat window for messages */
+        .messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding-right: 10px;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 10px;
+            justify-content: flex-start;
+            align-items: flex-end;
+        }
+
+        .message.ai {
+            justify-content: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        /* User and AI bubbles */
+        .bubble {
+            max-width: 70%;
+            padding: 12px;
+            border-radius: 20px;
+            font-size: 16px;
+            line-height: 1.4;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .bubble.user {
+            background-color: #2575fc;
+            color: #ffffff;
+            border-bottom-right-radius: 0;
+        }
+
+        .bubble.ai {
+            background-color: #333;
+            color: #ffffff;
+            border-bottom-left-radius: 0;
+            white-space: pre-wrap;
+        }
+
+        .input-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            padding-bottom: 10px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 50px;
+            border: none;
+            border-radius: 20px;
+            padding: 12px;
+            font-size: 16px;
+            font-family: inherit;
+            outline: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            resize: none;
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+
+        textarea::placeholder {
+            color: #d1d1d1;
+        }
+
+        /* On focus: background turns black, and add glow */
+        textarea:focus {
+            background: #000;
+            color: #ffffff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        button {
+            padding: 12px 20px;
+            font-size: 16px;
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            color: white;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(106, 17, 203, 0.3);
+        }
+
+        /* Stop button specific styling */
+        #stopButton {
+            background: linear-gradient(135deg, #fc6767, #ff3f3f);
+            margin-left: 10px;
+        }
+
+        /* Custom scrollbar */
+        .messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: #2575fc;
+            border-radius: 10px;
+        }
+
+        .messages::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        /* Thinking animation */
+        .thinking {
+            font-size: 18px;
+            color: #ffffff;
+            font-style: italic;
+        }
+
+        .ellipsis {
+            display: inline-block;
+            position: relative;
+        }
+
+        .ellipsis:before {
+            content: "•";
+            position: absolute;
+            animation: dot 1s infinite step-end;
+        }
+
+        .ellipsis:after {
+            content: "•";
+            position: absolute;
+            animation: dot 1.2s infinite step-end;
+        }
+
+        .ellipsis span {
+            animation: dot 1.4s infinite step-end;
+        }
+
+        @keyframes dot {
+            0% { opacity: 0; }
+            25% { opacity: 1; }
+            50% { opacity: 0; }
+            75% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* Loader (AI thinking) */
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #ffffff;
+            animation: spin 1s infinite linear;
+            margin: 10px auto;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+    </style>
 </head>
 <body>
-<h1>AI Generated Response</h1>
+<div class="container">
+    <div class="header">
+        <h1>AI Chat Assistant</h1>
+    </div>
+    <div class="messages" id="messagesContainer"></div>
+    <div class="input-container">
+        <textarea id="promptInput" placeholder="Type your message here..."></textarea>
+        <button id="sendButton">Send</button>
+        <button id="stopButton">Stop</button>
+    </div>
+    <div id="loader" class="loader" style="display: none;"></div>
+</div>
 
-<!-- Display the input text -->
-<p><strong>Your Input: </strong> <span th:text="${param.inputText}"></span></p>
+<script>
+    const messagesContainer = document.getElementById('messagesContainer');
+    const promptInput = document.getElementById('promptInput');
+    const sendButton = document.getElementById('sendButton');
+    const stopButton = document.getElementById('stopButton');
+    const loader = document.getElementById('loader');
+    let abortController;
 
-<!-- Display the generated response -->
-<p><strong>Response:</strong> <span th:text="${response}"></span></p>
-<form action="/generate" method="get">
-    <label for="inputText">Enter Text:</label>
-    <input type="text" id="inputText" name="inputText" placeholder="Enter your text here" required>
-    <button type="submit">Generate</button>
-</form>
+    // Function to add a message to the chat
+    function addMessage(content, sender = 'user') {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', sender);
+
+        const bubble = document.createElement('div');
+        bubble.classList.add('bubble', sender);
+        bubble.innerHTML = content;
+
+        messageDiv.appendChild(bubble);
+        messagesContainer.appendChild(messageDiv);
+
+        // Scroll to the bottom of the messages container
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Simulate typing effect for AI's response
+    function typeMessage(content, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', sender);
+
+        const bubble = document.createElement('div');
+        bubble.classList.add('bubble', sender);
+        bubble.innerHTML = '';
+        messageDiv.appendChild(bubble);
+        messagesContainer.appendChild(messageDiv);
+
+        // Scroll to the bottom
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        let index = 0;
+        const interval = setInterval(() => {
+            bubble.innerHTML += content[index];
+            index++;
+            if (index === content.length) {
+                clearInterval(interval);
+            }
+        }, 50); // Adjust speed of typing effect here
+    }
+
+    sendButton.addEventListener('click', async () => {
+        const prompt = promptInput.value.trim();
+        if (!prompt) return;
+
+        // Add user's message to the chat
+        addMessage(prompt, 'user');
+
+        // Show the loader while waiting for AI's response
+        loader.style.display = 'block';
+
+        // Initialize a new AbortController for each request
+        abortController = new AbortController();
+
+        try {
+            const response = await fetch(`/ai/chat?prompt=${encodeURIComponent(prompt)}`, {
+                signal: abortController.signal
+            });
+            loader.style.display = 'none';
+
+            if (response.ok) {
+                const data = await response.text();
+                typeMessage(data, 'ai');
+            } else {
+                typeMessage('Error: Unable to get response.', 'ai');
+            }
+        } catch (error) {
+            loader.style.display = 'none';
+            if (error.name === 'AbortError') {
+                typeMessage('Response was stopped.', 'ai');
+            } else {
+                typeMessage('Error: Unable to get response.', 'ai');
+            }
+        }
+
+        // Clear the input field
+        promptInput.value = '';
+    });
+
+    // Stop button to abort the request
+    stopButton.addEventListener('click', () => {
+        if (abortController) {
+            abortController.abort();
+            loader.style.display = 'none'; // Hide loader when aborted
+        }
+    });
+
+    // Handle Enter key to send message
+    promptInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            sendButton.click();
+            e.preventDefault();
+        }
+    });
+</script>
 </body>
 </html>
